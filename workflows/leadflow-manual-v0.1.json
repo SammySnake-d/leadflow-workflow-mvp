@@ -53,6 +53,34 @@
         1060,
         420
       ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const pack = items[0].json;\nconst campaign = pack.campaign;\nreturn [{\n  json: {\n    productName: campaign.productName,\n    targetCountry: campaign.targetCountry,\n    buyerType: campaign.buyerType,\n    monthlyLeadTarget: campaign.monthlyLeadTarget,\n    searchQueriesCount: pack.searchQueries.length,\n    starterRowsCount: pack.starterRows.length,\n    reviewColumns: pack.reviewSheetColumns.join(' | '),\n    fitRubric: pack.fitRubric.join('\\n'),\n    nextSteps: pack.nextSteps.join('\\n'),\n    notes: pack.notes.join('\\n'),\n    outreachPrompt: pack.outreachPrompt\n  }\n}];"
+      },
+      "id": "7626fdc6-19a4-40ea-8aea-01d8d3468534",
+      "name": "Pack Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1060,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const pack = items[0].json;\nreturn pack.searchQueries.map((query, index) => ({\n  json: {\n    rank: index + 1,\n    query\n  }\n}));"
+      },
+      "id": "470acfd4-795f-4548-a1d9-f18ae05a1b80",
+      "name": "Search Queries",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1060,
+        300
+      ]
     }
   ],
   "connections": {
@@ -81,6 +109,16 @@
     "Build LeadFlow Pack": {
       "main": [
         [
+          {
+            "node": "Pack Summary",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search Queries",
+            "type": "main",
+            "index": 0
+          },
           {
             "node": "Starter Rows",
             "type": "main",
