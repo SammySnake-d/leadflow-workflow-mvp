@@ -1,0 +1,100 @@
+{
+  "name": "LeadFlow 外贸客户开发 MVP v0.1",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "4d0c4f90-e570-47a7-bf15-3dd9da24833a",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const input = items[0]?.json ?? {};\n\n// v0.1: edit these defaults directly in this node before running.\nconst campaign = {\n  productName: input.productName ?? 'Double-wall stainless steel bottle',\n  targetCountry: input.targetCountry ?? 'Germany',\n  buyerType: input.buyerType ?? 'Outdoor gear distributor',\n  monthlyLeadTarget: Number(input.monthlyLeadTarget ?? 40),\n  priceBand: input.priceBand ?? 'mid-market',\n  productHighlights: input.productHighlights ?? [\n    'OEM logo support',\n    'Low MOQ',\n    'Fast sample turnaround',\n    'BPA-free materials'\n  ],\n  proofPoints: input.proofPoints ?? [\n    'Existing EU export experience',\n    '7-day sample turnaround',\n    'Flexible packaging options'\n  ],\n  exclusions: input.exclusions ?? [\n    'Amazon FBA aggregator',\n    'Consumer-only gift shops',\n    'No website or contact page'\n  ]\n};\n\nreturn [{ json: campaign }];"
+      },
+      "id": "ddc3d8e7-eb3d-4645-b9b5-3c88cb6a2af5",
+      "name": "Campaign Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const brief = items[0].json;\n\nconst market = brief.targetCountry;\nconst buyer = brief.buyerType;\nconst product = brief.productName;\nconst highlights = brief.productHighlights.join(', ');\nconst proof = brief.proofPoints.join('; ');\n\nconst searchQueries = [\n  `${product} ${market} ${buyer}`,\n  `${market} ${buyer} ${product} importer`,\n  `${market} ${buyer} ${product} distributor`,\n  `${market} ${buyer} ${product} wholesaler`,\n  `${market} ${buyer} \"contact\"`,\n  `${market} ${buyer} \"about us\"`,\n  `${market} ${buyer} site:linkedin.com/company`,\n  `${market} ${buyer} site:europages.com`,\n  `${market} ${buyer} site:kompass.com`,\n  `${market} ${buyer} site:yellowpages` \n];\n\nconst reviewSheetColumns = [\n  'company_name',\n  'website',\n  'country',\n  'buyer_type',\n  'contact_page',\n  'linkedin_url',\n  'fit_score',\n  'fit_reason',\n  'priority',\n  'email_status',\n  'first_touch_draft',\n  'human_review',\n  'next_action'\n];\n\nconst starterRows = Array.from({ length: Math.min(brief.monthlyLeadTarget, 8) }, (_, index) => ({\n  row_id: `lead-${String(index + 1).padStart(2, '0')}`,\n  company_name: '',\n  website: '',\n  country: market,\n  buyer_type: buyer,\n  contact_page: '',\n  linkedin_url: '',\n  fit_score: '',\n  fit_reason: '',\n  priority: 'to_review',\n  email_status: 'draft_not_started',\n  first_touch_draft: '',\n  human_review: 'required',\n  next_action: 'research company and confirm fit'\n}));\n\nconst fitRubric = [\n  '5 = product line directly matches and website shows active distribution/import activity',\n  '4 = adjacent buyer, has wholesale/distributor signals, likely fit',\n  '3 = possible fit but unclear purchasing authority or product overlap',\n  '2 = weak overlap or unclear business model',\n  '1 = no clear fit, missing website, or clearly excluded'\n];\n\nconst outreachPrompt = `You are drafting the first outbound email for a human sales rep.\\n\\nProduct: ${product}\\nTarget market: ${market}\\nBuyer type: ${buyer}\\nProduct highlights: ${highlights}\\nProof points: ${proof}\\n\\nRules:\\n1. Keep it under 120 words.\\n2. Mention one concrete fit reason from the target company.\\n3. No fake familiarity, no spammy urgency, no exaggerated claims.\\n4. End with a low-pressure CTA asking whether this category is relevant.\\n5. Human review is mandatory before sending.`;\n\nconst nextSteps = [\n  'Use the queries to research 20-40 candidate companies manually or via your preferred data source.',\n  'Fill the review sheet and score every company with the rubric before drafting emails.',\n  'Generate first-touch emails only for rows with fit_score >= 4.',\n  'Keep sending manual in v0.1. Do not automate email delivery before message quality is validated.'\n];\n\nreturn [{\n  json: {\n    campaign: brief,\n    searchQueries,\n    reviewSheetColumns,\n    starterRows,\n    fitRubric,\n    outreachPrompt,\n    nextSteps,\n    notes: [\n      'This MVP intentionally stops before scraping or sending email.',\n      'It is designed to validate whether users will pay for a structured prospecting workflow, not a generic n8n template bundle.',\n      'Human review stays in the loop.'\n    ]\n  }\n}];"
+      },
+      "id": "3486df84-0614-4986-b610-061aa9ba5486",
+      "name": "Build LeadFlow Pack",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const pack = items[0].json;\nreturn pack.starterRows.map((row) => ({ json: row }));"
+      },
+      "id": "526e8c4f-8967-40bf-a8bd-098ca4368f0e",
+      "name": "Starter Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1060,
+        420
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Campaign Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Campaign Brief": {
+      "main": [
+        [
+          {
+            "node": "Build LeadFlow Pack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build LeadFlow Pack": {
+      "main": [
+        [
+          {
+            "node": "Starter Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "pinData": {},
+  "active": false,
+  "versionId": "826ce8b6-f112-4e91-af17-1c4117dadcf7",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
